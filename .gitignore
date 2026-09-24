@@ -216,3 +216,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# --- Project-specific (Frame & Phrase) ---
+# Generated/uploaded images at runtime — keep the folders, ignore their contents
+static/outputs/*
+!static/outputs/.gitkeep
+static/uploads/*
+!static/uploads/.gitkeep
