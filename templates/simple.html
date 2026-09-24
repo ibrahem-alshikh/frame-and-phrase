@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>استوديو الصور والكلمات</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header>
+  <h1>استوديو الصور والكلمات</h1>
+  <nav>
+    <a href="{{ url_for('batch_page') }}">إنشاء مجموعة كاملة 📦</a>
+    <a href="{{ url_for('admin') }}">لوحة التحكم ⚙️</a>
+  </nav>
+</header>
+
+<div class="wrap">
+  <div class="grid two-col">
+    <div class="card">
+      <h2>أدخل صورتك وكلماتك</h2>
+      <form id="genForm">
+        <label for="image">الصورة</label>
+        <input type="file" id="image" name="image" accept="image/*" required>
+
+        <label for="text">الكلمات</label>
+        <textarea id="text" name="text" placeholder="اكتب كلماتك هنا... (يمكنك كتابة أكثر من سطر)" required></textarea>
+
+        <label for="text_font">نوع الخط</label>
+        <select id="text_font" name="text_font">
+          {% for value, label in fonts %}
+          <option value="{{ value }}" {{ 'selected' if settings.text.font == value }}>{{ label }}</option>
+          {% endfor %}
+        </select>
+
+        <div class="actions">
+          <button type="submit" class="btn" id="genBtn">إنشاء الصورة</button>
+          <a class="btn secondary hidden" id="downloadBtn" download="نتيجة.png">تنزيل الصورة</a>
+        </div>
+        <div class="status" id="status"></div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>المعاينة</h2>
+      <div class="preview-box" id="previewBox">
+        <span class="hint">ستظهر الصورة الناتجة هنا</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const form = document.getElementById('genForm');
+const statusEl = document.getElementById('status');
+const previewBox = document.getElementById('previewBox');
+const downloadBtn = document.getElementById('downloadBtn');
+const genBtn = document.getElementById('genBtn');
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  statusEl.textContent = '';
+  statusEl.className = 'status';
+  genBtn.disabled = true;
+  genBtn.textContent = 'جارٍ الإنشاء...';
+
+  try {
+    const fd = new FormData(form);
+    const res = await fetch('/generate', { method: 'POST', body: fd });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({error: 'حدث خطأ غير متوقع'}));
+      throw new Error(err.error || 'حدث خطأ غير متوقع');
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    previewBox.innerHTML = '';
+    const img = document.createElement('img');
+    img.src = url;
+    previewBox.appendChild(img);
+    downloadBtn.href = url;
+    downloadBtn.classList.remove('hidden');
+    statusEl.textContent = 'تم إنشاء الصورة بنجاح.';
+    statusEl.className = 'status ok';
+  } catch (err) {
+    statusEl.textContent = err.message;
+    statusEl.className = 'status error';
+  } finally {
+    genBtn.disabled = false;
+    genBtn.textContent = 'إنشاء الصورة';
+  }
+});
+</script>
+</body>
+</html>

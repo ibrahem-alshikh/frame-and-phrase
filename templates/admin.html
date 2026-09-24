@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة التحكم — استوديو الصور والكلمات</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header>
+  <h1>لوحة التحكم</h1>
+  <nav>
+    <a href="{{ url_for('index') }}">الواجهة البسيطة</a>
+    <a href="{{ url_for('batch_page') }}">إنشاء مجموعة كاملة 📦</a>
+  </nav>
+</header>
+
+<div class="wrap">
+  <form id="adminForm">
+    <div class="grid two-col">
+      <div>
+        <div class="card">
+          <h2>تجربة سريعة</h2>
+          <label for="image">الصورة</label>
+          <input type="file" id="image" name="image" accept="image/*">
+          <label for="text">الكلمات</label>
+          <textarea id="text" name="text">Words
+كلمات</textarea>
+        </div>
+
+        <fieldset>
+          <legend>مربع الصورة</legend>
+          <div class="row2">
+            <div><label>الموضع الأفقي X</label><input type="number" name="box_x" value="{{ settings.box.x }}"></div>
+            <div><label>الموضع الرأسي Y</label><input type="number" name="box_y" value="{{ settings.box.y }}"></div>
+          </div>
+          <div class="row2">
+            <div><label>العرض</label><input type="number" name="box_width" value="{{ settings.box.width }}"></div>
+            <div><label>الارتفاع</label><input type="number" name="box_height" value="{{ settings.box.height }}"></div>
+          </div>
+          <div class="row2">
+            <div><label>سمك الإطار</label><input type="number" name="box_border_width" value="{{ settings.box.border_width }}"></div>
+            <div><label>استدارة الزوايا</label><input type="number" name="box_corner_radius" value="{{ settings.box.corner_radius }}"></div>
+          </div>
+          <label>لون إطار الصورة</label>
+          <input type="color" name="box_border_color" value="{{ settings.box.border_color }}">
+
+          <label>طريقة عرض الصورة داخل المربع</label>
+          <select name="box_fit_mode">
+            <option value="cover" {{ 'selected' if settings.box.fit_mode == 'cover' }}>تغطية كاملة (قص الزوائد لملء المربع)</option>
+            <option value="contain" {{ 'selected' if settings.box.fit_mode == 'contain' }}>احتواء كامل بدون قص</option>
+          </select>
+
+          <label>لون الخلفية (يظهر فقط مع "احتواء كامل")</label>
+          <input type="color" name="box_background_color" value="{{ settings.box.background_color }}">
+        </fieldset>
+
+        <fieldset>
+          <legend>الكلمات (النص)</legend>
+          <div class="row2">
+            <div><label>الموضع الأفقي X</label><input type="number" name="text_x" value="{{ settings.text.x }}"></div>
+            <div><label>الموضع الرأسي Y</label><input type="number" name="text_y" value="{{ settings.text.y }}"></div>
+          </div>
+          <div class="row2">
+            <div><label>عرض منطقة النص</label><input type="number" name="text_width" value="{{ settings.text.width }}"></div>
+            <div><label>ارتفاع منطقة النص</label><input type="number" name="text_height" value="{{ settings.text.height }}"></div>
+          </div>
+
+          <label>نوع الخط</label>
+          <select name="text_font">
+            {% for value, label in fonts %}
+            <option value="{{ value }}" {{ 'selected' if settings.text.font == value }}>{{ label }}</option>
+            {% endfor %}
+          </select>
+
+          <div class="row2">
+            <div><label>حجم الخط</label><input type="number" name="text_font_size" value="{{ settings.text.font_size }}"></div>
+            <div><label>تباعد الأسطر</label><input type="number" step="0.05" name="text_line_spacing" value="{{ settings.text.line_spacing }}"></div>
+          </div>
+
+          <label>لون الخط</label>
+          <input type="color" name="text_color" value="{{ settings.text.color }}">
+
+          <div class="row2">
+            <div>
+              <label>محاذاة أفقية</label>
+              <select name="text_align">
+                <option value="right" {{ 'selected' if settings.text.align == 'right' }}>يمين</option>
+                <option value="center" {{ 'selected' if settings.text.align == 'center' }}>وسط</option>
+                <option value="left" {{ 'selected' if settings.text.align == 'left' }}>يسار</option>
+              </select>
+            </div>
+            <div>
+              <label>محاذاة رأسية</label>
+              <select name="text_valign">
+                <option value="top" {{ 'selected' if settings.text.valign == 'top' }}>أعلى</option>
+                <option value="middle" {{ 'selected' if settings.text.valign == 'middle' }}>وسط</option>
+                <option value="bottom" {{ 'selected' if settings.text.valign == 'bottom' }}>أسفل</option>
+              </select>
+            </div>
+          </div>
+        </fieldset>
+
+        <div class="actions">
+          <button type="button" class="btn" id="previewBtn">معاينة</button>
+          <button type="button" class="btn secondary" id="saveBtn">حفظ كإعدادات افتراضية</button>
+          <button type="button" class="btn ghost" id="resetBtn">استعادة الافتراضي</button>
+        </div>
+        <div class="status" id="status"></div>
+      </div>
+
+      <div class="card">
+        <h2>المعاينة</h2>
+        <div class="preview-box" id="previewBox">
+          <span class="hint">اضغط "معاينة" لرؤية النتيجة (قياس القالب {{ canvas[0] }}×{{ canvas[1] }})</span>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+
+<script>
+const form = document.getElementById('adminForm');
+const statusEl = document.getElementById('status');
+const previewBox = document.getElementById('previewBox');
+
+function setStatus(msg, ok) {
+  statusEl.textContent = msg;
+  statusEl.className = 'status ' + (ok === undefined ? '' : (ok ? 'ok' : 'error'));
+}
+
+async function preview() {
+  const imageInput = document.getElementById('image');
+  if (!imageInput.files.length) { setStatus('الرجاء اختيار صورة للمعاينة', false); return; }
+  if (!document.getElementById('text').value.trim()) { setStatus('الرجاء إدخال الكلمات', false); return; }
+
+  setStatus('جارٍ إنشاء المعاينة...');
+  try {
+    const fd = new FormData(form);
+    const res = await fetch('/admin/preview', { method: 'POST', body: fd });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({error: 'حدث خطأ غير متوقع'}));
+      throw new Error(err.error || 'حدث خطأ غير متوقع');
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    previewBox.innerHTML = '';
+    const img = document.createElement('img');
+    img.src = url;
+    previewBox.appendChild(img);
+    setStatus('تم تحديث المعاينة.', true);
+  } catch (err) {
+    setStatus(err.message, false);
+  }
+}
+
+document.getElementById('previewBtn').addEventListener('click', preview);
+
+document.getElementById('saveBtn').addEventListener('click', async () => {
+  setStatus('جارٍ الحفظ...');
+  try {
+    const fd = new FormData(form);
+    const res = await fetch('/admin/save', { method: 'POST', body: fd });
+    if (!res.ok) throw new Error('تعذر الحفظ');
+    setStatus('تم حفظ الإعدادات كافتراضية للواجهة البسيطة.', true);
+  } catch (err) {
+    setStatus(err.message, false);
+  }
+});
+
+document.getElementById('resetBtn').addEventListener('click', async () => {
+  if (!confirm('هل تريد استعادة الإعدادات الافتراضية الأصلية؟')) return;
+  setStatus('جارٍ الاستعادة...');
+  try {
+    const res = await fetch('/admin/reset', { method: 'POST' });
+    if (!res.ok) throw new Error('تعذرت الاستعادة');
+    setStatus('تمت الاستعادة. سيتم تحديث الصفحة.', true);
+    setTimeout(() => location.reload(), 800);
+  } catch (err) {
+    setStatus(err.message, false);
+  }
+});
+</script>
+</body>
+</html>

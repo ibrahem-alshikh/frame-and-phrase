@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>إنشاء مجموعة كاملة — استوديو الصور والكلمات</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header>
+  <h1>إنشاء مجموعة كاملة دفعة واحدة</h1>
+  <nav>
+    <a href="{{ url_for('index') }}">الواجهة البسيطة</a>
+    <a href="{{ url_for('admin') }}">لوحة التحكم ⚙️</a>
+  </nav>
+</header>
+
+<div class="wrap">
+  <div class="grid two-col">
+    <div>
+      <div class="card">
+        <h2>كيف يعمل؟</h2>
+        <p>
+          جهّز ملف <strong>Excel (.xlsx)</strong> أو <strong>CSV</strong> بعمودين فقط:
+        </p>
+        <ol>
+          <li>العمود الأول: <strong>اسم الملف</strong> — نفس اسم الصورة، مثل <code>Q004S002</code> (مع الامتداد أو بدونه).</li>
+          <li>العمود الثاني: <strong>الكلمات</strong> — النص الذي سيظهر على هذه الصورة تحديداً.</li>
+        </ol>
+        <p>الصف الأول يُعتبر عنوانًا ويُتجاهل تلقائياً.</p>
+        <p><a class="btn secondary" href="{{ url_for('batch_template') }}">تنزيل نموذج Excel جاهز</a></p>
+        <p style="color:#777; font-size:0.85rem;">
+          سيتم استخدام نفس إعدادات القالب المحفوظة حالياً (من لوحة التحكم) على كل صور المجموعة، لتكون كلها متزنة ومتناسقة.
+          كل صورة ناتجة تُحفظ باسم صورتها الأصلية نفسه، داخل مجلد جديد يُنشأ تلقائياً في مجلد <strong>التنزيلات (Downloads)</strong>.
+        </p>
+      </div>
+
+      <fieldset>
+        <legend>الملفات</legend>
+        <label for="mapping">ملف الكلمات (Excel أو CSV)</label>
+        <input type="file" id="mapping" name="mapping" accept=".xlsx,.csv">
+
+        <label for="images">الصور (يمكن اختيار مجلد كامل أو عدة صور معاً)</label>
+        <input type="file" id="images" name="images" accept="image/*" multiple webkitdirectory>
+
+        <div class="actions">
+          <button type="button" class="btn" id="runBtn">إنشاء المجموعة</button>
+        </div>
+        <div class="status" id="status"></div>
+      </fieldset>
+    </div>
+
+    <div class="card">
+      <h2>النتيجة</h2>
+      <div id="reportBox">
+        <span class="hint">ستظهر تفاصيل النتيجة هنا بعد التشغيل.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const runBtn = document.getElementById('runBtn');
+const statusEl = document.getElementById('status');
+const reportBox = document.getElementById('reportBox');
+
+function setStatus(msg, ok) {
+  statusEl.textContent = msg;
+  statusEl.className = 'status ' + (ok === undefined ? '' : (ok ? 'ok' : 'error'));
+}
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+runBtn.addEventListener('click', async () => {
+  const mappingInput = document.getElementById('mapping');
+  const imagesInput = document.getElementById('images');
+
+  if (!mappingInput.files.length) { setStatus('الرجاء رفع ملف الكلمات أولاً', false); return; }
+  if (!imagesInput.files.length) { setStatus('الرجاء اختيار الصور', false); return; }
+
+  const fd = new FormData();
+  fd.append('mapping', mappingInput.files[0]);
+  for (const f of imagesInput.files) {
+    if (f.type.startsWith('image/')) fd.append('images', f);
+  }
+
+  runBtn.disabled = true;
+  runBtn.textContent = 'جارٍ الإنشاء...';
+  setStatus('جارٍ معالجة المجموعة، قد يستغرق هذا بعض الوقت...');
+  reportBox.innerHTML = '';
+
+  try {
+    const res = await fetch('/batch/run', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'حدث خطأ غير متوقع');
+
+    setStatus(`تم! ${data.ok} من ${data.total} صورة بنجاح.`, data.ok > 0);
+
+    let html = data.output_dir
+      ? `<p><strong>مجلد النتائج:</strong><br><code>${esc(data.output_dir)}</code></p>`
+      : '<p>لم تنجح أي صورة، فلم يُنشأ أي مجلد.</p>';
+
+    const failed = data.results.filter(r => r.status !== 'ok');
+    if (failed.length) {
+      html += '<p><strong>لم تتم معالجتها:</strong></p><ul>';
+      for (const r of failed) {
+        const reason = r.status === 'missing_text' ? 'لا يوجد نص مطابق لهذا الاسم في ملف الكلمات' : (r.message || 'خطأ غير معروف');
+        html += `<li>${esc(r.file)} — ${esc(reason)}</li>`;
+      }
+      html += '</ul>';
+    }
+
+    if (data.unmatched_texts && data.unmatched_texts.length) {
+      html += '<p><strong>أسماء في ملف الكلمات بدون صورة مطابقة:</strong></p><ul>';
+      for (const k of data.unmatched_texts) html += `<li>${esc(k)}</li>`;
+      html += '</ul>';
+    }
+
+    reportBox.innerHTML = html;
+  } catch (err) {
+    setStatus(err.message, false);
+  } finally {
+    runBtn.disabled = false;
+    runBtn.textContent = 'إنشاء المجموعة';
+  }
+});
+</script>
+</body>
+</html>

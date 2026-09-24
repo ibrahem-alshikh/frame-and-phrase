@@ -1,0 +1,25 @@
+{
+  "box": {
+    "x": 77,
+    "y": 43,
+    "width": 425,
+    "height": 425,
+    "border_width": 8,
+    "border_color": "#8FA28A",
+    "corner_radius": 32,
+    "fit_mode": "cover",
+    "background_color": "#FBE4A8"
+  },
+  "text": {
+    "x": 505,
+    "y": 32,
+    "width": 490,
+    "height": 446,
+    "font": "calibrib.ttf",
+    "font_size": 72,
+    "color": "#17433F",
+    "align": "center",
+    "valign": "middle",
+    "line_spacing": 1.25
+  }
+}
