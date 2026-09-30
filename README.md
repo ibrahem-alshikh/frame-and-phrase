@@ -10,6 +10,9 @@ This project was built for **Dar Al-Nasaem for Publishing and Distribution (دا
 
 Upload a photo and a line (or a few lines) of text, and the app places your photo neatly inside a rounded frame on one side of the template, and renders your text — properly shaped and right-to-left for Arabic — on the other side. The output is a clean, transparent-background PNG ready to use.
 
+<img src="قالب.png" alt="Jafile Logo" width="500"/>
+
+
 **Key features:**
 
 - 🖼️ **Simple mode** — upload one photo + text, get one card instantly.
