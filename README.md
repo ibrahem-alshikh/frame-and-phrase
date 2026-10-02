@@ -12,13 +12,13 @@ Upload a photo and a line (or a few lines) of text, and the app places your phot
 
 <img src="قالب.png" alt="Jafile Logo" width="500"/>
 
-
 **Key features:**
 
 - 🖼️ **Simple mode** — upload one photo + text, get one card instantly.
 - ⚙️ **Admin/settings panel** — visually fine-tune the photo box and text box (position, size, colors, fonts, alignment) with a live preview, no code required.
 - 📦 **Batch mode** — upload a whole folder of photos plus an Excel/CSV file mapping filenames to text, and generate the entire batch in one click.
 - 🔤 **Arabic-aware text engine** — correct Arabic letter shaping/joining and right-to-left rendering (via `arabic-reshaper` + `python-bidi`), with automatic font fallback so no character ever renders as a blank box.
+- ✨ **Full tashkeel (diacritics) support** — fatḥa, ḍamma, kasra, sukūn, shadda, tanwīn and combinations (e.g. `حَجَرٌ`, `مُحَمَّد`) are kept and drawn correctly above/below the letters, with adjustable spacing.
 - 📐 **Auto-fit text** — text automatically shrinks to fit its box if it's too long, and wraps intelligently across multiple lines.
 - 🎨 **Multiple font choices** — several Arabic and Latin fonts bundled in, switchable from the settings panel.
 
@@ -32,7 +32,7 @@ SeraAppProgram/
 ├── imaging.py              # Core image-generation engine
 ├── batch.py                 # Batch processing + Excel template builder
 ├── config.py                # Loads/saves settings to config.json
-├── config.json              # Your saved default layout settings
+├── config.json              # Your saved default layout settings (incl. optional mark_gap)
 ├── requirements.txt          # Python dependencies
 ├── static/
 │   ├── template/            # The base design template (photo frame + card art)
@@ -118,6 +118,7 @@ This is where you control *exactly* how the photo and text are placed on the car
 | Align | Horizontal alignment: left / center / right |
 | V-align | Vertical alignment: top / middle / bottom |
 | Line spacing | Space between lines, as a multiplier (e.g. `1.25`) |
+| Tashkeel gap (`mark_gap`) | Space between a letter and its diacritics, as a fraction of the font size (default `0.07`). Not shown in the panel — edit it in `config.json` (see below) |
 
 **Workflow:**
 1. Adjust any settings you like.
@@ -127,6 +128,28 @@ This is where you control *exactly* how the photo and text are placed on the car
 5. Want to start over? Click **Reset to defaults** to restore the original layout.
 
 > 💡 All coordinates are in pixels, based on a canvas size of **1024 × 512 px** — the same size as the template artwork.
+
+### Arabic diacritics (tashkeel)
+
+Just type the text with its tashkeel (e.g. `المُلْتَزَم (وهو عند باب الكعبة)`) — in the quick page, or in column B of the Excel file for batch mode. Make sure the Excel cell really contains the diacritics (they're easy to lose when copy-pasting from some sources).
+
+How it works, in short:
+
+- The reshaper is configured to **keep** the diacritics (by default it deletes them).
+- Each diacritic is drawn separately, centered on its letter and placed **clear of the letter's ink** (tall stems and dots included) so it never touches or overlaps the letter. When a letter has two marks (e.g. shadda + fatḥa) they are stacked.
+- Many fonts (Calibri, Tahoma, Arial, Amiri, Almarai, Baloo) draw a dotted circle when their diacritic glyph is used on its own, so the marks are taken from the **Dubai** font instead (Cairo and Dubai use their own). The letters still use the font you chose.
+
+**Adjusting the spacing:** open `config.json` and add/edit `mark_gap` inside the `"text"` section:
+
+```json
+"text": {
+  "...": "...",
+  "line_spacing": 1.25,
+  "mark_gap": 0.07
+}
+```
+
+`0.04` = closer, `0.10`–`0.12` = more space. It applies to quick, preview and batch generation. Saving from the Admin panel keeps your `mark_gap` value.
 
 ### Batch mode — generating many cards at once (`/batch`)
 
@@ -143,6 +166,8 @@ Perfect for producing a large set of cards in one go — for example, an entire 
    - Your filled-in Excel/CSV file.
    - All the corresponding photo files (select multiple at once).
 5. Click **Run batch**.
+
+> Upload limit: up to **2 GB** per batch run (e.g. ~400 photos of 5 MB each). The limit is `MAX_UPLOAD_GB` at the top of `app.py`.
 
 The app matches each photo to its row in the spreadsheet by filename, generates every card using your currently saved Admin settings, and saves the finished PNGs into a new, timestamped folder inside your **Downloads** folder (e.g. `نتائج_المجموعة_20260925_143000`).
 
@@ -171,7 +196,9 @@ If a chosen font is missing a particular character, the app automatically fills 
 
 ## 🛠️ Troubleshooting
 
-- **"File too large" error** — uploads are capped at 500 MB total per request. Split a very large batch into smaller groups if you hit this.
+- **"File too large" error** — uploads are capped at **2 GB** total per request. Split a very large batch into smaller groups, or raise `MAX_UPLOAD_GB` in `app.py` (then restart the app).
+- **Diacritics don't appear** — make sure you're using the updated `imaging.py`, and that the text actually contains the diacritics (check the cell in Excel).
+- **Diacritics too close to / too far from the letters** — adjust `mark_gap` in `config.json` (see *Arabic diacritics* above).
 - **Text looks cut off or too small** — increase the text box's width/height in the Admin panel, or check that "Font size" isn't set too conservatively.
 - **A photo isn't matched in batch mode** — make sure the photo's filename (minus extension) matches Column A in your spreadsheet *exactly* (matching ignores capitalization but not spelling).
 - **App won't start** — double check you ran `pip install -r requirements.txt` and that you're using Python 3.9+.
