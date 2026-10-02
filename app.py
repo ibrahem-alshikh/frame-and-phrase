@@ -11,7 +11,10 @@ app = Flask(__name__)
 # Generous limits: a whole folder of photos for /batch/run can easily be
 # well over the previous 20 MB cap, or contain more files than Werkzeug's
 # default 1000-part cap — both used to fail the upload outright.
-app.config["MAX_CONTENT_LENGTH"] = 500 * 1024 * 1024  # 500 MB uploads
+# Upload cap: 2 GB per request (was 500 MB). The app runs locally, so this is
+# just a safety net; change the number below if you ever need more or less.
+MAX_UPLOAD_GB = 2
+app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_GB * 1024 * 1024 * 1024
 app.config["MAX_FORM_PARTS"] = 10000
 
 
@@ -22,7 +25,7 @@ def handle_http_exception(e):
     # "Unexpected token '<'" instead of a readable message.
     message = e.description or e.name
     if e.code == 413:
-        message = "حجم الملفات المرفوعة أكبر من الحد المسموح به (500 ميجابايت). قسّم المجموعة إلى دفعات أصغر."
+        message = f"حجم الملفات المرفوعة أكبر من الحد المسموح به ({MAX_UPLOAD_GB} جيجابايت). قسّم المجموعة إلى دفعات أصغر."
     return jsonify({"error": message}), e.code
 
 
@@ -65,6 +68,8 @@ def settings_from_form(form, current):
             "align": g("text_align", str, "text", "align"),
             "valign": g("text_valign", str, "text", "valign"),
             "line_spacing": g("text_line_spacing", float, "text", "line_spacing"),
+            # no field for this in the admin form: it is kept from config.json
+            "mark_gap": g("text_mark_gap", float, "text", "mark_gap"),
         },
     }
 
