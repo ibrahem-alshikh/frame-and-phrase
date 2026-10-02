@@ -27,6 +27,7 @@ DEFAULT_SETTINGS = {
         "align": "center",
         "valign": "middle",
         "line_spacing": 1.25,
+        "mark_gap": 0.07,
     },
 }
 
